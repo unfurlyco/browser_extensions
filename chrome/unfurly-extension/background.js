@@ -4,45 +4,81 @@ let authToken = null;
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension installed/updated - Creating context menu items...');
   
-  // Context menu for links
+  // Create parent menu item
+  // chrome.contextMenus.create({
+  //   id: "unfurlyMenu",
+  //   title: "Unfur.ly",
+  //   contexts: ["all"]
+  // });
+
+  // Context menu for links - show in both link and page contexts
   chrome.contextMenus.create({
     id: "furlLink",
+    // parentId: "unfurlyMenu",
     title: "Furl This Link",
     contexts: ["link"]
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error('Error creating link menu:', chrome.runtime.lastError);
-    } else {
-      console.log('Link menu created successfully');
-    }
   });
 
-  // Context menu for pages
+  // Context menu for pages - show in all contexts
   chrome.contextMenus.create({
     id: "furlPage",
+    // parentId: "unfurlyMenu",
     title: "Furl This Page",
-    contexts: ["page"]
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error('Error creating page menu:', chrome.runtime.lastError);
-    } else {
-      console.log('Page menu created successfully');
-    }
+    contexts: ["all"]
   });
 });
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  console.log('Context menu clicked:', {
-    menuItemId: info.menuItemId,
-    linkUrl: info.linkUrl,
-    pageUrl: info.pageUrl,
-    tabId: tab.id
-  });
+  const urlToShorten = info.menuItemId === "furlLink" ? info.linkUrl : tab.url;
   
-  const url = info.menuItemId === "furlLink" ? info.linkUrl : info.pageUrl;
-  console.log('URL to be shortened:', url);
-  handleFurl(url, tab.id);
+  chrome.storage.local.get(["authToken"], async (result) => {
+    if (!result.authToken) {
+      // Handle not logged in state
+      chrome.tabs.create({ url: 'https://unfur.ly/app/login' });
+      return;
+    }
+
+    try {
+      const response = await fetch('https://unfur.ly/api/ui/v1/redirects', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${result.authToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          url: urlToShorten
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create short URL');
+      }
+
+      const data = await response.json();
+      
+      // Copy the shortened URL to clipboard
+      await navigator.clipboard.writeText(data.furlUrl);
+      
+      // Show notification
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: 'URL Shortened!',
+        message: 'The shortened URL has been copied to your clipboard.'
+      });
+
+    } catch (error) {
+      console.error('Error creating short URL:', error);
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon128.png',
+        title: 'Error',
+        message: 'Failed to create shortened URL. Please try again.'
+      });
+    }
+  });
 });
 
 // Handle browser action click (toolbar icon)

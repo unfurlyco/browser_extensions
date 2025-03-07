@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Unfur.ly URL Shortener",
+  "name": "Unfur.ly - URL Shortener",
   "version": "1.0",
   "description": "Create short URLs with unfur.ly directly from your browser",
   "permissions": [
@@ -9,7 +9,7 @@
     "storage",
     "clipboardWrite",
     "tabs",
-    "clipboard"
+    "notifications"
   ],
   "host_permissions": [
     "https://unfur.ly/*",
@@ -38,11 +38,9 @@
       "popup/*",
       "icons/*",
       "css/*",
-      "lib/*"
+      "lib/*",
+      "fonts/*"
     ],
     "matches": ["<all_urls>"]
-  }],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' https://cdnjs.cloudflare.com; object-src 'self'"
-  }
+  }]
 } 
