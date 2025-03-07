@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Unfur.ly</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="popup.css">
+  <link rel="stylesheet" type="text/css" href="../css/primeicons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Bellota:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="../lib/qrcode.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="login-section">
+      <h2 class="logo">Unfur.ly</h2>
+      <form id="login-form">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <div class="remember-me">
+          <input type="checkbox" id="remember-me">
+          <label for="remember-me">Remember Me</label>
+        </div>
+        <button type="submit" id="login-btn">Login</button>
+      </form>
+    </div>
+    
+    <div id="logged-in-section" style="display: none;">
+      <div class="header">
+        <h2 class="logo">Unfur.ly</h2>
+        <a href="#" id="logout-btn" class="logout-icon" title="Logout">
+          <span class="material-icons">logout</span>
+        </a>
+      </div>
+      <div id="recent-urls">
+        <h3>Last 10 Recent Furls</h3>
+        <ul id="urls-list"></ul>
+      </div>
+    </div>
+  </div>
+  <div id="qr-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>QR Code</h3>
+        <button class="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="qrcode"></div>
+        <div class="qr-actions">
+          <button id="download-qr" class="action-btn">
+            <i class="pi pi-download"></i>
+            Download
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 
