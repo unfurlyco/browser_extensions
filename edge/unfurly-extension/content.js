@@ -1,15 +1,3 @@
-// Add this at the start of content.js
-if (window.location.hostname === 'unfur.ly') {
-  // Check if we have a token to inject
-  chrome.storage.local.get('unfurlyToken').then(result => {
-    if (result.unfurlyToken) {
-      localStorage.setItem('token', result.unfurlyToken);
-      // Clear it from storage after setting
-      chrome.storage.local.remove('unfurlyToken');
-    }
-  });
-}
-
 // Listen for messages from background script
 console.log('Content script loaded and listening for messages');
 
@@ -31,6 +19,13 @@ chrome.runtime.onMessage.addListener((message) => {
       .catch(err => {
         console.error("Clipboard copy failed:", err);
       });
+  }
+
+  // Add this handler for setting token
+  if (message.type === "setToken" && 
+      (window.location.hostname === 'unfur.ly' || window.location.hostname.endsWith('.unfur.ly'))) {
+    console.log('Setting token in localStorage');
+    localStorage.setItem('token', message.token);
   }
 });
 

@@ -16,10 +16,14 @@
 <body>
   <div class="container">
     <div id="login-section">
-      <h2>Unfur.ly</h2>
+      <h2 class="logo">Unfur.ly</h2>
       <form id="login-form">
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Password">
+        <input type="email" id="email" placeholder="Email" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <div class="remember-me">
+          <input type="checkbox" id="remember-me">
+          <label for="remember-me">Remember Me</label>
+        </div>
         <button type="submit" id="login-btn">Login</button>
       </form>
     </div>

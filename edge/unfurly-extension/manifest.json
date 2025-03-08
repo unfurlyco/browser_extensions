@@ -10,7 +10,8 @@
     "clipboardWrite",
     "tabs",
     "*://unfur.ly/*",
-    "notifications"
+    "notifications",
+    "webNavigation"
   ],
   "browser_action": {
     "default_popup": "popup/popup.html",
@@ -25,7 +26,11 @@
     "persistent": false
   },
   "content_scripts": [{
-    "matches": ["<all_urls>"],
+    "matches": [
+      "<all_urls>",
+      "*://unfur.ly/*",
+      "*://*.unfur.ly/*"
+    ],
     "js": ["content.js"]
   }],
   "icons": {

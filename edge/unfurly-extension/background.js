@@ -1,4 +1,4 @@
-let authToken = null;
+let token = null;
 let preventAutoLogin = false;
 
 // Add these constants at the top
@@ -60,9 +60,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   const urlToShorten = info.menuItemId === "furlLink" ? info.linkUrl : tab.url;
   const pageTitle = info.menuItemId === "furlLink" ? urlToShorten : tab.title;
   
-  chrome.storage.local.get(["authToken"]).then(async (result) => {
-    if (!result.authToken) {
-      console.log('No auth token found, showing message');
+  chrome.storage.local.get(["token"]).then(async (result) => {
+    if (!result.token) {
+      console.log('No token found, showing message');
       chrome.tabs.sendMessage(tab.id, {
         type: "showNotification",
         message: "✨ Hey there! Click the Unfur.ly icon in your toolbar and log in to start creating magical short URLs! 🚀",
@@ -76,7 +76,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       const response = await fetch('https://unfur.ly/api/ui/v1/redirects', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${result.authToken}`,
+          'Authorization': `Bearer ${result.token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
@@ -125,7 +125,7 @@ async function executeTokenInjection(token) {
     // Store the token in extension storage
     // Content script will handle injecting it into localStorage when on unfur.ly
     await chrome.storage.local.set({ 
-      unfurlyToken: token 
+      token: token 
     });
   } catch (error) {
     console.error('Token storage failed:', error);
@@ -137,8 +137,8 @@ async function handleLogout() {
   console.log('Logging out of extension');
   
   try {
-    await chrome.storage.local.remove(["authToken", "userProfile", "unfurlyToken"]);
-    authToken = null;
+    await chrome.storage.local.remove(["token", "userProfile"]);
+    token = null;
   } catch (error) {
     console.error('Error in handleLogout:', error);
   }
@@ -149,8 +149,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Message received in background:', message);
 
   if (message.type === "login") {
-    console.log('Setting auth token');
-    authToken = message.token;
+    console.log('Setting token');
+    token = message.token;
     executeTokenInjection(message.token);
   } 
   else if (message.type === "logout") {
@@ -158,6 +158,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   // Add other message handlers as needed...
 });
+
+// Add this to background.js
+chrome.webNavigation.onBeforeNavigate.addListener(
+  function(details) {
+    // Get the token and inject it before page load
+    chrome.storage.local.get(['token'], function(result) {
+      if (result.token) {
+        chrome.tabs.executeScript(details.tabId, {
+          code: `
+            localStorage.setItem('token', '${result.token}');
+            console.log('Token injected before page load');
+          `,
+          runAt: 'document_start'
+        });
+      }
+    });
+  },
+  {
+    url: [
+      { hostContains: 'unfur.ly' }
+    ]
+  }
+);
 
 // Rest of your background.js code...
 // Replace all chrome. with browser. 

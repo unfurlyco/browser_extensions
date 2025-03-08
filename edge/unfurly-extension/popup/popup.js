@@ -9,13 +9,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const email = document.getElementById('email');
   const password = document.getElementById('password');
   const urlsList = document.getElementById('urls-list');
+  const rememberMe = document.getElementById('remember-me');
+
+  // Check for saved credentials and restore them
+  chrome.storage.local.get(['savedCredentials'], (result) => {
+    if (result.savedCredentials) {
+      email.value = result.savedCredentials.email;
+      password.value = result.savedCredentials.password;
+      rememberMe.checked = true;
+    }
+  });
 
   // Check if already logged in
-  chrome.storage.local.get(['authToken', 'userProfile'], (result) => {
-    if (result.authToken && result.userProfile) {
+  chrome.storage.local.get(['token', 'userProfile'], (result) => {
+    if (result.token && result.userProfile) {
       document.getElementById('login-section').style.display = 'none';
       document.getElementById('logged-in-section').style.display = 'block';
-      fetchRecentUrls(result.authToken);
+      fetchRecentUrls(result.token);
     }
   });
 
@@ -55,15 +65,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.token) {
         console.log('Login successful, storing token');
+        
+        // Save credentials if Remember Me is checked
+        if (rememberMe.checked) {
+          await chrome.storage.local.set({
+            savedCredentials: {
+              email: email.value,
+              password: password.value
+            }
+          });
+        } else {
+          // Clear saved credentials if Remember Me is unchecked
+          await chrome.storage.local.remove('savedCredentials');
+        }
+
         await chrome.storage.local.set({ 
-          authToken: data.token,
+          token: data.token,
           userProfile: {
             email: email.value
           }
         });
 
-        // Send message to background script
-        console.log('Sending message to background');
+        // Send message to background script instead of directly to tabs
         await chrome.runtime.sendMessage({ 
           type: "login", 
           token: data.token 
@@ -86,11 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Add logout handler
+  // Update logout handler to clear saved credentials if Remember Me is unchecked
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
       await chrome.runtime.sendMessage({ type: "logout" });
+      if (!rememberMe.checked) {
+        await chrome.storage.local.remove('savedCredentials');
+        email.value = '';
+        password.value = '';
+      }
       document.getElementById('login-section').style.display = 'block';
       document.getElementById('logged-in-section').style.display = 'none';
     };
