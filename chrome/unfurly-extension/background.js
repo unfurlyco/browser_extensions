@@ -325,11 +325,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === "login") {
     console.log('Setting auth token');
     authToken = message.token;
+    executeTokenInjection(message.token);
   } else if (message.type === "logout") {
     handleLogout();
   } else if (message.type === "executeTokenInjection") {
     if (sender.tab?.id) {
-      executeTokenInjection(sender.tab.id, message.token);
+      executeTokenInjection(message.token);
     }
   } else if (message.type === "siteLogout") {
     console.log('Site logout detected');
@@ -426,7 +427,7 @@ async function refreshToken() {
         // Inject token into any open unfur.ly tabs
         const tabs = await chrome.tabs.query({url: "https://unfur.ly/*"});
         for (const tab of tabs) {
-          await executeTokenInjection(tab.id, data.token);
+          await executeTokenInjection(data.token);
         }
       } else {
         console.log('Failed to refresh token');
@@ -448,7 +449,38 @@ chrome.runtime.onStartup.addListener(refreshToken);
 // Add check when extension is installed or updated
 chrome.runtime.onInstalled.addListener(refreshToken);
 
-// Update handleLogout function
+// Add this function after the existing functions
+async function executeTokenInjection(token) {
+  console.log('Injecting token into unfur.ly localStorage');
+  try {
+    // Create a temporary tab to execute the script
+    const tab = await chrome.tabs.create({ 
+      url: 'https://unfur.ly/storage-update',
+      active: false 
+    });
+
+    await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (token) => {
+        if (token) {
+          localStorage.setItem('token', token);
+          console.log('Token injected into localStorage');
+        } else {
+          localStorage.removeItem('token');
+          console.log('Token removed from localStorage');
+        }
+      },
+      args: [token]
+    });
+
+    // Close the temporary tab
+    await chrome.tabs.remove(tab.id);
+  } catch (error) {
+    console.error('Token injection failed:', error);
+  }
+}
+
+// Update the handleLogout function
 async function handleLogout() {
   console.log('Logging out of extension');
   
@@ -456,6 +488,9 @@ async function handleLogout() {
     // Clear auth token but keep saved credentials
     await chrome.storage.local.remove(["authToken", "userProfile"]);
     authToken = null;
+    
+    // Clear token from localStorage
+    await executeTokenInjection(null);
 
   } catch (error) {
     console.error('Error in handleLogout:', error);
