@@ -374,6 +374,9 @@ h2 {
 
 .modal-header h3 {
   margin: 0;
+  text-align: center;
+  width: 100%;
+  line-height: 1.5;
 }
 
 .close-modal {
@@ -480,4 +483,18 @@ h2 {
   text-overflow: ellipsis;
   max-width: 120px;
   display: block;
+}
+
+.modal-furl-link {
+  color: #2196F3;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9em;
+  word-break: break-all;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.modal-furl-link:hover {
+  text-decoration: underline;
 } 

@@ -268,10 +268,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Update the event listeners section in fetchRecentUrls
       table.querySelectorAll('.qr-btn').forEach(button => {
-        button.removeAttribute('disabled'); // Enable QR buttons
+        button.removeAttribute('disabled');
         button.addEventListener('click', (e) => {
           const url = e.currentTarget.closest('tr').querySelector('.short-url').href;
           const modal = document.getElementById('qr-modal');
+          const modalTitle = modal.querySelector('h3');
+          modalTitle.innerHTML = `QR Code for:<br><a href="${url}" target="_blank" class="modal-furl-link">${url.replace('https://', '')}</a>`;
           modal.style.display = 'block';
           generateQRCode(url);
         });
