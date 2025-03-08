@@ -5,16 +5,16 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension installed/updated - Creating context menu items...');
   
   // Create parent menu item
-  // chrome.contextMenus.create({
-  //   id: "unfurlyMenu",
-  //   title: "Unfur.ly",
-  //   contexts: ["all"]
-  // });
+  chrome.contextMenus.create({
+    id: "unfurlyMenu",
+    title: "Unfur.ly - URL Shortener",
+    contexts: ["all"]
+  });
 
   // Context menu for links - show in both link and page contexts
   chrome.contextMenus.create({
     id: "furlLink",
-    // parentId: "unfurlyMenu",
+    parentId: "unfurlyMenu",
     title: "Furl This Link",
     contexts: ["link"]
   });
@@ -22,22 +22,48 @@ chrome.runtime.onInstalled.addListener(() => {
   // Context menu for pages - show in all contexts
   chrome.contextMenus.create({
     id: "furlPage",
-    // parentId: "unfurlyMenu",
+    parentId: "unfurlyMenu",
     title: "Furl This Page",
+    contexts: ["all"]
+  });
+
+  // Add separator
+  chrome.contextMenus.create({
+    id: "separator",
+    parentId: "unfurlyMenu",
+    type: "separator",
+    contexts: ["all"]
+  });
+
+  // Add "Go to App" menu item
+  chrome.contextMenus.create({
+    id: "goToApp",
+    parentId: "unfurlyMenu",
+    title: "Go to App",
     contexts: ["all"]
   });
 });
 
+
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "goToApp") {
+    // For "Go to App", always open the main app
+    chrome.tabs.create({ url: 'https://unfur.ly/app/main' });
+    return;
+  }
+
   console.log('Context menu clicked:', { info, tab });
   const urlToShorten = info.menuItemId === "furlLink" ? info.linkUrl : tab.url;
   const pageTitle = info.menuItemId === "furlLink" ? urlToShorten : tab.title;
   
   chrome.storage.local.get(["authToken"], async (result) => {
     if (!result.authToken) {
-      console.log('No auth token found, redirecting to login');
-      chrome.tabs.create({ url: 'https://unfur.ly/app/login' });
+      console.log('No auth token found, showing login popup');
+      // Store the "needs login" state
+      chrome.storage.local.set({ "showLoginPrompt": true });
+      // Show the popup
+      chrome.action.openPopup();
       return;
     }
 
@@ -67,6 +93,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       const data = await response.json();
       console.log('Short URL created successfully:', data);
       
+      // Notify all open popups to refresh their lists
+      chrome.runtime.sendMessage({ 
+        type: "refreshFurlsList" 
+      });
+
       // Inject content script if not already injected
       try {
         console.log('Attempting to inject content script into tab:', tab.id);

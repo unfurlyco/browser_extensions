@@ -16,16 +16,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlsList = document.getElementById('urls-list');
   const rememberMeCheckbox = document.getElementById('remember-me');
 
-  // Check for saved credentials
-  chrome.storage.local.get(["authToken", "userProfile", "savedCredentials"], (result) => {
+  // Check for login prompt flag
+  chrome.storage.local.get(["authToken", "userProfile", "savedCredentials", "showLoginPrompt"], (result) => {
     if (result.authToken && result.userProfile) {
       showLoggedInState(result.userProfile);
       fetchRecentUrls(result.authToken);
-    } else if (result.savedCredentials) {
-      // Auto-fill saved credentials
-      emailInput.value = result.savedCredentials.email;
-      passwordInput.value = result.savedCredentials.password;
-      rememberMeCheckbox.checked = true;
+    } else {
+      if (result.savedCredentials) {
+        // Auto-fill saved credentials
+        emailInput.value = result.savedCredentials.email;
+        passwordInput.value = result.savedCredentials.password;
+        rememberMeCheckbox.checked = true;
+      }
+      
+      // Show login prompt if flag is set
+      if (result.showLoginPrompt) {
+        showError("Please login to create a furl");
+        // Clear the flag
+        chrome.storage.local.remove("showLoginPrompt");
+      }
     }
   });
 
@@ -176,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <th>Short URL</th>
             <th>Original URL</th>
             <th>Title</th>
-            <th>Clicks</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -200,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update the row template in fetchRecentUrls
       sortedItems.slice(0, 10).forEach(url => {
         const row = document.createElement('tr');
-        const clickCount = formatNumber(url.clicks || 0);
         row.innerHTML = `
           <td>
             <a href="${url.furlUrl}" target="_blank" class="short-url">
@@ -212,11 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
               ${url.redirectTo}
             </div>
           </td>
-          <td>${url.title || '-'}</td>
           <td>
-            <span class="clicks-badge">
-              ${clickCount} clicks
-            </span>
+            <div class="title-cell" title="${url.title || '-'}">
+              ${url.title || '-'}
+            </div>
           </td>
           <td class="actions">
             <button class="action-btn copy-btn" data-tooltip="Copy to Clipboard" data-url="${url.furlUrl}">
@@ -417,4 +423,15 @@ document.addEventListener('DOMContentLoaded', () => {
       return null;
     }
   }
+
+  // Listen for refresh requests from background script
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === "refreshFurlsList") {
+      chrome.storage.local.get(["authToken"], (result) => {
+        if (result.authToken) {
+          fetchRecentUrls(result.authToken);
+        }
+      });
+    }
+  });
 }); 

@@ -60,8 +60,16 @@ function showNotification(message, isError = false, shortUrl = null) {
       background: ${isError ? '#FEF2F2' : '#F0FDF4'};
       border-radius: 4px;
       word-break: break-all;
+      cursor: pointer;
+      transition: background-color 0.2s;
     `;
-    urlDiv.textContent = shortUrl;
+    urlDiv.innerHTML = `<a href="${shortUrl}" target="_blank" style="color: inherit; text-decoration: none;">${shortUrl}</a>`;
+    urlDiv.addEventListener('mouseover', () => {
+      urlDiv.style.backgroundColor = isError ? '#FEE2E2' : '#DCFCE7';
+    });
+    urlDiv.addEventListener('mouseout', () => {
+      urlDiv.style.backgroundColor = isError ? '#FEF2F2' : '#F0FDF4';
+    });
     notification.appendChild(urlDiv);
   }
 
