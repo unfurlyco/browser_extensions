@@ -1,6 +1,7 @@
 // Listen for messages from background script
 console.log('Content script loaded and listening for messages');
 
+// Message listener
 chrome.runtime.onMessage.addListener((message) => {
   console.log('Content script received message:', message);
   
@@ -82,4 +83,4 @@ function showNotification(message, isError = false, shortUrl = null) {
     notification.style.transition = 'all 0.3s ease-in-out';
     setTimeout(() => notification.remove(), 300);
   }, 5000);
-} 
+}

@@ -1,4 +1,9 @@
 let authToken = null;
+let preventAutoLogin = false;
+
+// Add these constants at the top
+const TOKEN_CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+const TOKEN_CHECK_KEY = 'lastTokenCheck';
 
 // Create context menu items
 chrome.runtime.onInstalled.addListener(() => {
@@ -321,8 +326,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Setting auth token');
     authToken = message.token;
   } else if (message.type === "logout") {
-    console.log('Clearing auth token');
-    authToken = null;
+    handleLogout();
+  } else if (message.type === "executeTokenInjection") {
+    if (sender.tab?.id) {
+      executeTokenInjection(sender.tab.id, message.token);
+    }
+  } else if (message.type === "siteLogout") {
+    console.log('Site logout detected');
+    
+    // Show confirmation dialog via popup
+    chrome.windows.create({
+      url: 'popup/logout-confirm.html',
+      type: 'popup',
+      width: 400,
+      height: 250
+    });
+  } else if (message.type === "preventAutoLogin") {
+    preventAutoLogin = message.value;
+    console.log('Auto login prevention set to:', preventAutoLogin);
   }
 });
 
@@ -332,4 +353,111 @@ chrome.storage.local.get("authToken", (result) => {
   if (result.authToken) {
     authToken = result.authToken;
   }
-}); 
+});
+
+// Add this function to handle token refresh
+async function refreshToken() {
+  console.log('Checking if token refresh is needed');
+  
+  try {
+    const storage = await chrome.storage.local.get(["authToken", "savedCredentials", TOKEN_CHECK_KEY]);
+    const lastCheck = storage[TOKEN_CHECK_KEY] || 0;
+    const now = Date.now();
+
+    // Check if enough time has passed since last check
+    if (now - lastCheck < TOKEN_CHECK_INTERVAL) {
+      console.log('Not time to check token yet');
+      return;
+    }
+
+    // Update last check time
+    await chrome.storage.local.set({ [TOKEN_CHECK_KEY]: now });
+
+    // If we have a token, test if it's still valid
+    if (storage.authToken) {
+      const response = await fetch('https://unfur.ly/api/ui/v1/redirects', {
+        headers: {
+          'Authorization': `Bearer ${storage.authToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        console.log('Token still valid');
+        return;
+      }
+      
+      console.log('Token expired, attempting to refresh');
+    }
+
+    // If we have saved credentials, try to log in again
+    if (storage.savedCredentials) {
+      console.log('Attempting to refresh login with saved credentials');
+      
+      const response = await fetch('https://unfur.ly/api/ui/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          username: storage.savedCredentials.email,
+          password: storage.savedCredentials.password
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.token) {
+        console.log('Successfully refreshed token');
+        await chrome.storage.local.set({ 
+          authToken: data.token,
+          userProfile: {
+            email: storage.savedCredentials.email
+          }
+        });
+        
+        // Notify any open popups to refresh
+        chrome.runtime.sendMessage({ 
+          type: "tokenRefreshed",
+          token: data.token 
+        });
+
+        // Inject token into any open unfur.ly tabs
+        const tabs = await chrome.tabs.query({url: "https://unfur.ly/*"});
+        for (const tab of tabs) {
+          await executeTokenInjection(tab.id, data.token);
+        }
+      } else {
+        console.log('Failed to refresh token');
+        // Clear the auth token but keep saved credentials
+        await chrome.storage.local.remove("authToken");
+      }
+    }
+  } catch (error) {
+    console.error('Error in token refresh:', error);
+  }
+}
+
+// Add periodic token check
+setInterval(refreshToken, 30 * 60 * 1000); // Check every 30 minutes
+
+// Also check on startup
+chrome.runtime.onStartup.addListener(refreshToken);
+
+// Add check when extension is installed or updated
+chrome.runtime.onInstalled.addListener(refreshToken);
+
+// Update handleLogout function
+async function handleLogout() {
+  console.log('Logging out of extension');
+  
+  try {
+    // Clear auth token but keep saved credentials
+    await chrome.storage.local.remove(["authToken", "userProfile"]);
+    authToken = null;
+
+  } catch (error) {
+    console.error('Error in handleLogout:', error);
+  }
+} 

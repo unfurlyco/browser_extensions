@@ -107,13 +107,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear auth token and profile
     chrome.storage.local.remove(["authToken", "userProfile"]);
     
-    // Only clear saved credentials if "Remember Me" is unchecked
-    if (!rememberMeCheckbox.checked) {
-      chrome.storage.local.remove("savedCredentials");
-    }
-    
     chrome.runtime.sendMessage({ type: "logout" });
     showLoginState();
+
+    // Add this to auto-fill credentials if they were saved
+    chrome.storage.local.get("savedCredentials", (result) => {
+      if (result.savedCredentials) {
+        emailInput.value = result.savedCredentials.email;
+        passwordInput.value = result.savedCredentials.password;
+        rememberMeCheckbox.checked = true;
+      }
+    });
   });
 
   function showLoggedInState(profile) {
@@ -434,6 +438,10 @@ document.addEventListener('DOMContentLoaded', () => {
           fetchRecentUrls(result.authToken);
         }
       });
+    } else if (message.type === "tokenRefreshed") {
+      // Handle refreshed token - update UI if needed
+      showLoggedInState({email: emailInput.value});
+      fetchRecentUrls(message.token);
     }
   });
 }); 
