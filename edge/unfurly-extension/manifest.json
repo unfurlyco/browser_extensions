@@ -1,0 +1,48 @@
+{
+  "manifest_version": 2,
+  "name": "Unfur.ly - URL Shortener",
+  "version": "25.3.8.3",
+  "description": "Create short URLs with unfur.ly directly from your browser",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "clipboardWrite",
+    "tabs",
+    "*://unfur.ly/*",
+    "notifications"
+  ],
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["content.js"]
+  }],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    "popup/*",
+    "icons/*",
+    "css/*",
+    "lib/*",
+    "fonts/*",
+    "fonts/primeicons.eot",
+    "fonts/primeicons.svg",
+    "fonts/primeicons.ttf",
+    "fonts/primeicons.woff",
+    "fonts/primeicons.woff2"
+  ]
+} 
