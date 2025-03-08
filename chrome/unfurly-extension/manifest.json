@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Unfur.ly - URL Shortener",
-  "version": "25.03.07.4",
+  "version": "25.3.8.2",
   "description": "Create short URLs with unfur.ly directly from your browser",
   "permissions": [
     "activeTab",

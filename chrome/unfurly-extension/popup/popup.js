@@ -339,11 +339,11 @@ document.addEventListener('DOMContentLoaded', () => {
       // Create QR code
       const qr = new QRCode(qrcodeDiv, {
         text: url,
-        width: 300,
-        height: 300,
+        width: 200,
+        height: 200,
         colorDark: "#000000",
         colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H // Use high error correction for logo overlay
+        correctLevel: QRCode.CorrectLevel.H
       });
       
       // Add logo after a short delay to ensure QR code is rendered
