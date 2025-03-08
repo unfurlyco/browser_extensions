@@ -62,9 +62,12 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
   
   browser.storage.local.get(["authToken"]).then(async (result) => {
     if (!result.authToken) {
-      console.log('No auth token found, showing login popup');
-      await browser.storage.local.set({ "showLoginPrompt": true });
-      browser.browserAction.openPopup();
+      console.log('No auth token found, showing message');
+      browser.tabs.sendMessage(tab.id, {
+        type: "showNotification",
+        message: "✨ Hey there! Click the Unfur.ly icon in your toolbar and log in to start creating magical short URLs! 🚀",
+        isError: true
+      });
       return;
     }
 
@@ -113,6 +116,11 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
       });
     }
   });
+});
+
+// Add notification click listener
+browser.notifications.onClicked.addListener(() => {
+  browser.browserAction.openPopup();
 });
 
 // Add this function to handle token injection

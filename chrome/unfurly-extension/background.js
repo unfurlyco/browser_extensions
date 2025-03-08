@@ -53,7 +53,6 @@ chrome.runtime.onInstalled.addListener(() => {
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "goToApp") {
-    // For "Go to App", always open the main app
     chrome.tabs.create({ url: 'https://unfur.ly/app/main' });
     return;
   }
@@ -62,13 +61,17 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   const urlToShorten = info.menuItemId === "furlLink" ? info.linkUrl : tab.url;
   const pageTitle = info.menuItemId === "furlLink" ? urlToShorten : tab.title;
   
-  chrome.storage.local.get(["authToken"], async (result) => {
+  chrome.storage.local.get(["authToken"]).then(async (result) => {
     if (!result.authToken) {
-      console.log('No auth token found, showing login popup');
-      // Store the "needs login" state
-      chrome.storage.local.set({ "showLoginPrompt": true });
-      // Show the popup
-      chrome.action.openPopup();
+      console.log('No auth token found, showing login notification');
+      // Send notification to content script
+      chrome.tabs.sendMessage(tab.id, {
+        type: "showNotification",
+        message: "Please log in to create a short URL",
+        isError: true
+      });
+      // Set flag to show login prompt when popup opens
+      await chrome.storage.local.set({ "showLoginPrompt": true });
       return;
     }
 
