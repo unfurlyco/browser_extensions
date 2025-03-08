@@ -9,6 +9,7 @@
     "storage",
     "clipboardWrite",
     "tabs",
+    "scripting",
     "notifications"
   ],
   "host_permissions": [

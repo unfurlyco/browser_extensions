@@ -1,36 +1,25 @@
 // Listen for messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+console.log('Content script loaded and listening for messages');
+
+chrome.runtime.onMessage.addListener((message) => {
+  console.log('Content script received message:', message);
+  
   if (message.type === "showNotification") {
+    console.log('Showing notification:', message);
     showNotification(message.message, message.isError, message.shortUrl);
   }
+  
   if (message.type === "copyToClipboard") {
-    // const input = document.createElement('input');
-    // input.style.position = 'fixed';
-    // input.style.opacity = '0';
-    // input.value = message.text;
-    // document.body.appendChild(input);
-    // input.select();
-    // document.execCommand('copy');
-    // document.body.removeChild(input);
-    // sendResponse({ success: true });
-
-    console.log("Copying to clipboard:", message.shortUrl);
+    console.log('Copying to clipboard:', message.shortUrl);
     navigator.clipboard.writeText(message.shortUrl)
       .then(() => {
-        console.log("Copied!");
-        sendResponse({ status: "success" });
+        console.log("Clipboard copy successful");
       })
       .catch(err => {
-        console.error("Copy failed", err);
-        sendResponse({ status: "error", error: err });
+        console.error("Clipboard copy failed:", err);
       });
-    // Return true to indicate asynchronous sendResponse
-    return true;
-
   }
 });
-
-
 
 function showNotification(message, isError = false, shortUrl = null) {
   // Remove any existing notifications

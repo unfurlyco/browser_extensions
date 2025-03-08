@@ -30,16 +30,19 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  console.log('Context menu clicked:', { info, tab });
   const urlToShorten = info.menuItemId === "furlLink" ? info.linkUrl : tab.url;
+  const pageTitle = info.menuItemId === "furlLink" ? urlToShorten : tab.title;
   
   chrome.storage.local.get(["authToken"], async (result) => {
     if (!result.authToken) {
-      // Handle not logged in state
+      console.log('No auth token found, redirecting to login');
       chrome.tabs.create({ url: 'https://unfur.ly/app/login' });
       return;
     }
 
     try {
+      console.log('Attempting to create short URL for:', urlToShorten);
       const response = await fetch('https://unfur.ly/api/ui/v1/redirects', {
         method: 'POST',
         headers: {
@@ -48,7 +51,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          url: urlToShorten
+          redirectTo: urlToShorten,
+          title: pageTitle,
+          // vanity: '',
+          private: true,
+          type: 'STD',
+          domain: 'unfur.ly'
         })
       });
 
@@ -57,26 +65,48 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       }
 
       const data = await response.json();
+      console.log('Short URL created successfully:', data);
       
-      // Copy the shortened URL to clipboard
-      await navigator.clipboard.writeText(data.furlUrl);
-      
-      // Show notification
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: 'URL Shortened!',
-        message: 'The shortened URL has been copied to your clipboard.'
-      });
+      // Inject content script if not already injected
+      try {
+        console.log('Attempting to inject content script into tab:', tab.id);
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        console.log('Content script injection successful');
+      } catch (e) {
+        console.error('Content script injection error:', e);
+      }
+
+      // Send message to copy URL to clipboard
+      console.log('Sending copyToClipboard message to tab:', tab.id);
+      await chrome.tabs.sendMessage(tab.id, {
+        type: "copyToClipboard",
+        shortUrl: data.furlUrl
+      }).catch(e => console.error('Copy message failed:', e));
+
+      // Send message to show success notification
+      console.log('Sending showNotification message to tab:', tab.id);
+      await chrome.tabs.sendMessage(tab.id, {
+        type: "showNotification",
+        message: "URL shortened successfully! Copied to clipboard.",
+        shortUrl: data.furlUrl
+      }).catch(e => console.error('Notification message failed:', e));
 
     } catch (error) {
-      console.error('Error creating short URL:', error);
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon128.png',
-        title: 'Error',
-        message: 'Failed to create shortened URL. Please try again.'
-      });
+      console.error('Error in shortening process:', error);
+      try {
+        // Attempt to show error notification
+        console.log('Attempting to send error notification to tab:', tab.id);
+        await chrome.tabs.sendMessage(tab.id, {
+          type: "showNotification",
+          message: "Failed to create shortened URL. Please try again. " + error,
+          isError: true
+        }).catch(e => console.error('Error notification failed:', e));
+      } catch (e) {
+        console.error('Failed to send error notification:', e);
+      }
     }
   });
 });
