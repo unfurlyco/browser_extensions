@@ -3,12 +3,11 @@ console.log('%c Unfurly Content Script Loaded ', 'background: #222; color: #bada
 
 // Add this at the start of content.js
 if (window.location.hostname === 'unfur.ly') {
-  // Check if we have a token to inject
-  browser.storage.local.get('unfurlyToken').then(result => {
-    if (result.unfurlyToken) {
-      localStorage.setItem('token', result.unfurlyToken);
-      // Clear it from storage after setting
-      browser.storage.local.remove('unfurlyToken');
+  console.log('On unfur.ly domain, checking for token');
+  browser.storage.local.get('token').then(result => {
+    if (result.token && !localStorage.getItem('tokenInjected')) {
+      console.log('Found token to inject');
+      injectToken(result.token);
     }
   });
 }
@@ -156,6 +155,19 @@ function copyToClipboard(text) {
   });
 }
 
+// At the start of content.js
+function injectToken(token) {
+  console.log('Injecting token into localStorage');
+  try {
+    localStorage.setItem('token', token);
+    // Also set a flag to indicate we've injected the token
+    localStorage.setItem('tokenInjected', 'true');
+    console.log('Token injection successful');
+  } catch (error) {
+    console.error('Failed to inject token:', error);
+  }
+}
+
 // Update the message listener
 browser.runtime.onMessage.addListener((message) => {
   console.log('Content script received message:', message);
@@ -169,6 +181,11 @@ browser.runtime.onMessage.addListener((message) => {
     console.log('Showing notification with copy button:', message.shortUrl);
     // Instead of trying to auto-copy, just show the notification with copy button
     showNotification("URL created successfully!", false, message.shortUrl);
+  }
+
+  if (message.type === "injectToken") {
+    console.log('Received token injection request');
+    injectToken(message.token);
   }
 });
 

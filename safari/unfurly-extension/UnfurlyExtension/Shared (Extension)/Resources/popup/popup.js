@@ -27,11 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const rememberMeCheckbox = document.getElementById('remember-me');
 
   // Check for login prompt flag
-  browser.storage.local.get(["authToken", "userProfile", "savedCredentials", "showLoginPrompt"])
+  browser.storage.local.get(["token", "userProfile", "savedCredentials", "showLoginPrompt"])
     .then((result) => {
-      if (result.authToken && result.userProfile) {
+      if (result.token && result.userProfile) {
         showLoggedInState(result.userProfile);
-        fetchRecentUrls(result.authToken);
+        fetchRecentUrls(result.token);
       } else {
         if (result.savedCredentials) {
           // Auto-fill saved credentials
@@ -90,17 +90,21 @@ document.addEventListener('DOMContentLoaded', () => {
         await browser.storage.local.remove("savedCredentials");
       }
 
-      // Store auth token and user profile
+      // Store token and user profile
       await browser.storage.local.set({
-        authToken: data.token,
+        token: data.token,
         userProfile: { email: emailInput.value }
       });
 
-      // Notify background script
+      // Notify background script to set cookie and inject token
       await browser.runtime.sendMessage({ 
         type: "login", 
         token: data.token 
       });
+
+      // Since we're on unfur.ly domain during login, we can set localStorage directly
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('tokenInjected', 'true');
 
       showLoggedInState({ email: emailInput.value });
       fetchRecentUrls(data.token);
@@ -113,8 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   logoutBtn.addEventListener('click', async () => {
-    // Clear auth token and profile
-    await browser.storage.local.remove(["authToken", "userProfile"]);
+    // Clear token and profile
+    await browser.storage.local.remove(["token", "userProfile"]);
     await browser.runtime.sendMessage({ type: "logout" });
     showLoginState();
 
@@ -246,7 +250,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.appendChild(row);
       });
 
-      // Add event listeners for copy buttons
+      // Add the table to the DOM
+      urlsList.appendChild(table);
+
+      // Add the copy button handlers after the table is created
       table.querySelectorAll('.copy-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
           const url = e.currentTarget.dataset.url;
@@ -303,12 +310,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
 
-      urlsList.innerHTML = '';
-      urlsList.appendChild(table);
-
       if (sortedItems.length === 0) {
         urlsList.innerHTML = '<div class="no-urls">No shortened URLs yet</div>';
       }
+
     } catch (error) {
       console.error('Error fetching recent URLs:', error);
       urlsList.innerHTML = '<div class="error">Failed to load recent URLs</div>';
@@ -360,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         };
         
-        logo.src = browser.runtime.getURL('icons/icon128.png');
+        logo.src = browser.runtime.getURL('images/icon-128.png');
       }, 100);
       
     } catch (error) {
@@ -403,18 +408,4 @@ document.addEventListener('DOMContentLoaded', () => {
       return null;
     }
   }
-
-  // Listen for refresh requests from background script
-  browser.runtime.onMessage.addListener((message) => {
-    if (message.type === "refreshFurlsList") {
-      browser.storage.local.get(["authToken"]).then((result) => {
-        if (result.authToken) {
-          fetchRecentUrls(result.authToken);
-        }
-      });
-    } else if (message.type === "tokenRefreshed") {
-      showLoggedInState({email: emailInput.value});
-      fetchRecentUrls(message.token);
-    }
-  });
-}); 
+});

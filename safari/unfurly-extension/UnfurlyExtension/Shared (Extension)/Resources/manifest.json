@@ -11,7 +11,8 @@
         "clipboardRead",
         "tabs",
         "*://unfur.ly/*",
-        "nativeMessaging"
+        "nativeMessaging",
+        "cookies"
     ],
     "browser_action": {
         "default_popup": "popup/popup.html",
@@ -43,6 +44,7 @@
         "images/*",
         "css/*",
         "lib/*",
-        "fonts/*"
+        "fonts/*",
+        "icons/*"
     ]
 }
